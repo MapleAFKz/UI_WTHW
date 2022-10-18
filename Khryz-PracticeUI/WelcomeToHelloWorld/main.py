@@ -1,187 +1,146 @@
 from PySide2 import QtCore, QtWidgets, QtGui
-from PySide2.QtCore import QSettings #PyQt5
-#from PyQt5.QtWidgets import QApplication, QWidget
-from PySide2.QtWidgets import QApplication, QMainWindow, QLabel, QWidget, QCheckBox, QDoubleSpinBox, QRadioButton
+from PySide2.QtCore import QSettings, QObject
+from PySide2.QtWidgets import QApplication, QMainWindow, QLabel, QWidget, QCheckBox, QDoubleSpinBox, QRadioButton, QLineEdit, QSpinBox
 from PySide2.QtGui import QIcon
-from WTHW.gen.ui_sample import Ui_MainWindow 
-from distutils.util import strtobool
+
+#from WTHW.gen.ui_sample import Ui_MainWindow        # Test WTHW UI
+from WTHW.gen.ui_Preset_Setup import Ui_Preset_Setup
+
+from distutils.util import strtobool        # For read_from_reg function
+
+import logging
+import base64
+import uuid
 import sys
 
 # Window inherits from QtWidget -> has functions from QtWidgets.QMainWindow Class
 # Inherits from Ui_MainWindow from ui_sample.py -> can use and adjust values from the QT Designer UI you made
 class Window(QMainWindow):
     def __init__(self):
+        # Required 
         super().__init__()
-        self.ui = Ui_MainWindow()
+        self.ui = Ui_Preset_Setup()
         self.ui.setupUi(self)
+        self.uuid = uuid.uuid4()    # For testing purpose: use uuid4() to generate random uuid (session based), otherwise use uuid1() for machine based
+        
+        # Preset values
+        #self.ui.Voltage_Preset_spinBox.valueChanged.connect(lambda: self.ui.Voltage_Preset_spinBox.setValue())
+        #self.ui.Amperage_Preset_spinBox.valueChanged.connect(lambda: self.ui.Amperage_Preset_spinBox.setValue())
+        #self.ui.Exposure_Preset_spinBox.valueChanged.connect(lambda: self.ui.Exposure_Preset_spinBox.setValue())
+        #self.ui.Averaging_Preset_spinBox.valueChanged.connect(lambda: self.ui.Averaging_Preset_spinBox.setValue())
+        # Positions (x, y, z)
+        #self.ui.posX_Preset_doubleSpinBox.valueChanged.connect(lambda: self.ui.posX_Preset_doubleSpinBox.setValue())
+        #self.ui.posY_Preset_doubleSpinBox.valueChanged.connect(lambda: self.ui.posY_Preset_doubleSpinBox.setValue())
+        #self.ui.posZ_Preset_doubleSpinBox.valueChanged.connect(lambda: self.ui.posZ_Preset_doubleSpinBox.setValue())
 
-        # Set window properties: title, size, icon
-        self.setWindowTitle("Welcome to Hello World!")
-        self.setGeometry(300,300,800,600)       # (x,y,w,h)
-        # Test QIcon
-        self.setIcon()
-        self.displayIcon()
-        # Test back/next buttons
-        self.ui.nextButton.clicked.connect(lambda: self.next_page())
-        self.ui.backButton.clicked.connect(lambda: self.previous_page())
-        # Test enter button
-        self.ui.enterBtn.clicked.connect(lambda: self.enter_button())
-        # Test spinbox for weight and height - deprecated
-        #self.ui.weightSpinBox.valueChanged.connect(lambda: self.set_weight())
-        #self.ui.heightSpinBox.valueChanged.connect(lambda: self.set_height())
-        # Test checkbox for occupation
-        self.ui.writeToRegBtn.clicked.connect(lambda: self.write_to_reg())
-        self.ui.readFromRegBtn.clicked.connect(lambda: self.read_from_reg())        
-        # QSetting for read/write to Windows Registry
-        self.settings = QSettings('Creative Electron Inc.', 'KhryzWTHW')
-        print(self.settings.fileName())
+        #self.ui.Load_CurrentValues_Button.clicked.connect(lambda: self.load_preset())
+        self.ui.Create_NewPreset_Button.clicked.connect(lambda: self.create_preset())      # Need to rename
+        self.settings = QSettings('Creative Electron Inc.', 'TruView NEXT')  
         self.show() 
 
-    # QIcon - display icon on the window
-    def setIcon(self):
-        appIcon = QIcon("icon.png") 
-        self.setWindowIcon(appIcon)
+   
 
-    # QIcon - display in app
-    # WIP: turn off icon when in other pages (not page_1)
-    def displayIcon(self):
-        icon1 = QIcon("icon.png")
-        label1 = QLabel('Logo', self)
-        #label1.setIconSize(label1.size(100,100))
-        if(self.ui.stackedWidget.currentIndex() == 0):
-            pixmap1 = icon1.pixmap(100,100,QIcon.Normal,QIcon.On)
-            label1.setPixmap(pixmap1)
-            label1.move(175,130)
-        else:
-            label1 = icon1.pixmap(0,0,QIcon.Disabled,QIcon.Off)
-            #label1.setVisible(False)
+    #   create_preset()
+    #   saves into registry
+    def create_preset(self):
+        # CheckBoxes - the state of each checkbox to be used in the include to preset check
+        if isinstance(self.ui.Voltage_Preset_checkBox, QCheckBox):
+            name = self.ui.Voltage_Preset_checkBox.objectName()                  # assign widget name
+            Include_Voltage = self.ui.Voltage_Preset_checkBox.isChecked()        # value to be written and stored into registry
+            #self.settings.setValue(name, Include_Voltage)                        # set the state into name(obj)
+        if isinstance(self.ui.Amperage_Preset_checkBox, QCheckBox):
+            name = self.ui.Amperage_Preset_checkBox.objectName()        
+            Include_Amperage = self.ui.Amperage_Preset_checkBox.isChecked()        
+            #self.settings.setValue(name, Include_Amperage)   
+        if isinstance(self.ui.Exposure_Preset_checkBox, QCheckBox):
+            name = self.ui.Exposure_Preset_checkBox.objectName()        
+            Include_Exposure = self.ui.Exposure_Preset_checkBox.isChecked()        
+            #self.settings.setValue(name, Include_Exposure)
+        if isinstance(self.ui.Averaging_Preset_checkBox, QCheckBox):
+            name = self.ui.Averaging_Preset_checkBox.objectName()        
+            Include_Averaging = self.ui.Averaging_Preset_checkBox.isChecked()        
+            #self.settings.setValue(name, Include_Averaging)
+        if isinstance(self.ui.Position_Preset_checkBox, QCheckBox):
+            name = self.ui.Position_Preset_checkBox.objectName()        
+            Include_Position = self.ui.Position_Preset_checkBox.isChecked()        
+            #self.settings.setValue(name, Include_Position)
 
-    # next_page - next page via nextButton
-    # WIP: turn off next button if on page_1
-    def next_page(self):
-         current_page = self.ui.stackedWidget.currentIndex()
-         i = int(current_page) + 1
-         self.ui.stackedWidget.setCurrentIndex(i)
+        # SpinBoxes - numerical values for Voltage, Amperage, Exposure, Averaging
+        if isinstance(self.ui.Voltage_Preset_spinBox, QSpinBox):
+            name = self.ui.Voltage_Preset_spinBox.objectName()
+            voltage_value = self.ui.Voltage_Preset_spinBox.value()
+            #self.settings.setValue(name, voltage_value)
 
-    # previous_page - go back 1 page via backButton
-    # WIP: turn off back button on page_3
-    def previous_page(self):
-        current_page = self.ui.stackedWidget.currentIndex()
-        i = int(current_page) - 1
-        self.ui.stackedWidget.setCurrentIndex(i)
+        if isinstance(self.ui.Amperage_Preset_spinBox, QSpinBox):
+            name = self.ui.Amperage_Preset_spinBox.objectName()
+            amperage_value = self.ui.Amperage_Preset_spinBox.value()
+            #self.settings.setValue(name, amperage_value)
 
-    # enter_button - handles enter button in page_1
-    # Takes in user input name and date of birth (DOB)
-    # Should change Welcome text to Welcome {user name input}. Your DOB is{user DOB}
-    # WIP: Line Edit fields should != NULL, provide empty field check -> display error message to user and do nothing (Set label: "Cannot be empty!")
-    def enter_button(self):
-        user_name = self.ui.nameFieldLE
-        user_DOB = self.ui.DOBFieldLE
-        self.ui.welcomeLabel.setText(f"Welcome {user_name.text()}. \nYour DOB is {user_DOB.text()}") 
-        self.ui.welcomeLabel.adjustSize()
+        if isinstance(self.ui.Exposure_Preset_spinBox, QSpinBox):
+            name = self.ui.Exposure_Preset_spinBox.objectName()
+            exposure_value = self.ui.Exposure_Preset_spinBox.value()
+            #self.settings.setValue(name, exposure_value)
 
-    # Writes values to registry - currently only used for ui.page_2
-    # WIP: needs to write value from SpinBox to registry
-    def write_to_reg(self):
-        # Checkboxes - handles occupation select
-        if isinstance(self.ui.checkBox, QCheckBox):
-            name = self.ui.checkBox.objectName()          # assign widget name
-            state_1 = self.ui.checkBox.isChecked()        # value to be written and stored into registry
-            self.settings.setValue(name, state_1)         # set the state into name
-        if isinstance(self.ui.checkBox_2, QCheckBox):
-            name = self.ui.checkBox_2.objectName()        
-            state_2 = self.ui.checkBox_2.isChecked()        
-            self.settings.setValue(name, state_2)   
-        if isinstance(self.ui.checkBox_3, QCheckBox):
-            name = self.ui.checkBox_3.objectName()        
-            state_3 = self.ui.checkBox_3.isChecked()        
-            self.settings.setValue(name, state_3)
-        if isinstance(self.ui.checkBox_4, QCheckBox):
-            name = self.ui.checkBox_4.objectName()        
-            state_4 = self.ui.checkBox_4.isChecked()        
-            self.settings.setValue(name, state_4)
-        if isinstance(self.ui.checkBox_5, QCheckBox):
-            name = self.ui.checkBox_5.objectName()        
-            state_5 = self.ui.checkBox_5.isChecked()        
-            self.settings.setValue(name, state_5)
-        # RadioButtons - handles gender select
-        if isinstance(self.ui.genderBtn_Female, QRadioButton):
-            name = self.ui.genderBtn_Female.objectName()
-            isFemale = self.ui.genderBtn_Female.isChecked()
-            self.settings.setValue(name, isFemale)
-        if isinstance(self.ui.genderBtn_Male, QRadioButton):
-            name = self.ui.genderBtn_Male.objectName()
-            isMale = self.ui.genderBtn_Male.isChecked()
-            self.settings.setValue(name, isMale)
-        
-        # Testing: Spinbox values to be saved
-        if isinstance(self.ui.weightSpinBox, QDoubleSpinBox):
-            name = self.ui.weightSpinBox.objectName()
-            user_weight = self.ui.weightSpinBox.value()
-            self.settings.setValue(name, user_weight)
+        if isinstance(self.ui.Averaging_Preset_spinBox, QSpinBox):
+            name = self.ui.Averaging_Preset_spinBox.objectName()
+            averaging_value = self.ui.Averaging_Preset_spinBox.value()
+            #self.settings.setValue(name, averaging_value)
 
-        if isinstance(self.ui.heightSpinBox, QDoubleSpinBox):
-            name = self.ui.heightSpinBox.objectName()
-            user_height = self.ui.heightSpinBox.value()
-            self.settings.setValue(name, user_height)
+        if isinstance(self.ui.Voltage_Preset_spinBox, QSpinBox):
+            name = self.ui.Voltage_Preset_spinBox.objectName()
+            voltage_value = self.ui.Voltage_Preset_spinBox.value()
+            #self.settings.setValue(name, voltage_value)
+
+        # DoubleSpinBoxes - Position X, Z, Y
+        if isinstance(self.ui.posX_Preset_doubleSpinBox, QDoubleSpinBox):
+            name = self.ui.posX_Preset_doubleSpinBox.objectName()
+            posx_value = self.ui.posX_Preset_doubleSpinBox.value()
+            #self.settings.setValue(name, float(posx_value))
+        if isinstance(self.ui.posZ_Preset_doubleSpinBox, QDoubleSpinBox):
+            name = self.ui.posZ_Preset_doubleSpinBox.objectName()
+            posz_value = self.ui.posZ_Preset_doubleSpinBox.value()
+            #self.settings.setValue(name, float(posz_value))
+        if isinstance(self.ui.posY_Preset_doubleSpinBox, QDoubleSpinBox):
+            name = self.ui.posY_Preset_doubleSpinBox.objectName()
+            posy_value = self.ui.posY_Preset_doubleSpinBox.value()
+            #self.settings.setValue(name, float(posy_value))
+
+        # Save the state of CheckBoxes for Voltage, Amperage, Exposure, Averaging, Position
+        self.settings.setValue(f'presets/{self.uuid}/Include_Voltage', Include_Voltage)
+        self.settings.setValue(f'presets/{self.uuid}/Include_Amperage', Include_Amperage)
+        self.settings.setValue(f'presets/{self.uuid}/Include_Exposure', Include_Exposure)
+        self.settings.setValue(f'presets/{self.uuid}/Include_Averaging', Include_Averaging)
+        self.settings.setValue(f'presets/{self.uuid}/Include_Position', Include_Position)
+        # Save values for Voltage, Amperage, Exposure, Averaging, Position
+        self.settings.setValue(f'presets/{self.uuid}/Voltage', voltage_value)
+        self.settings.setValue(f'presets/{self.uuid}/Amperage', amperage_value)
+        self.settings.setValue(f'presets/{self.uuid}/Exposure', exposure_value)
+        self.settings.setValue(f'presets/{self.uuid}/Averaging', averaging_value)
+        # Save values for PosX, Z, Y
+        self.settings.setValue(f'presets/{self.uuid}/Position X', float(posx_value))
+        self.settings.setValue(f'presets/{self.uuid}/Position Z', float(posz_value))
+        self.settings.setValue(f'presets/{self.uuid}/Position Y', float(posy_value))
+
+    def load(self):
+        pass
+
+   
+    def delete(self):     
+       self.settings2.beginGroup("presets")   
+       self.settings2.remove(self.uuid)
+       self.app.user_info_logging("deleted a presets")
+       ll.info("User deleted a preset")
 
 
-    # Read CheckBox state from registry, load into GUI
-    # Values are from CheckBoxes(Occupation), RadioButtons(Gender), SpinBoxes(Weight and Height)
-    def read_from_reg(self):
-        # CheckBoxes - any # can be active/inactive
-        if isinstance(self.ui.checkBox, QCheckBox):
-            name = self.ui.checkBox.objectName()
-            value = self.settings.value(name)       # stored value from registry
-            if value != None:
-                self.ui.checkBox.setChecked(strtobool(value))       # sets isChecked state based on what is stored
-        if isinstance(self.ui.checkBox_2, QCheckBox):
-            name = self.ui.checkBox_2.objectName()
-            value = self.settings.value(name)       
-            if value != None:
-                self.ui.checkBox_2.setChecked(strtobool(value))    
-        if isinstance(self.ui.checkBox_3, QCheckBox):
-            name = self.ui.checkBox_3.objectName()
-            value = self.settings.value(name)       
-            if value != None:
-                self.ui.checkBox_3.setChecked(strtobool(value))  
+    @staticmethod
+    def get_uuids():     
+        self.settings.beginGroup("presets")    # stores uuid's keys into Computer\HKEY_CURRENT_USER\SOFTWARE\Creative Electron Inc.\TruView NEXT\users\presets 
+        uuids = settings.childGroups() # returns all the keys from presets into uuids?
+        return uuids
 
-        if isinstance(self.ui.checkBox_4, QCheckBox):
-            name = self.ui.checkBox_4.objectName()
-            value = self.settings.value(name)       
-            if value != None:
-                self.ui.checkBox_4.setChecked(strtobool(value))  
-        if isinstance(self.ui.checkBox_5, QCheckBox):
-            name = self.ui.checkBox_5.objectName()
-            value = self.settings.value(name)       
-            if value != None:
-                self.ui.checkBox_5.setChecked(strtobool(value))  
-        # RadioButtons - only one can be active
-        if isinstance(self.ui.genderBtn_Female, QRadioButton):
-            name = self.ui.genderBtn_Female.objectName()
-            value = self.settings.value(name)
-            if value != None:
-                self.ui.genderBtn_Female.setChecked(strtobool(value))
-        elif isinstance(self.ui.genderBtn_Male, QRadioButton):
-            name = self.ui.genderBtn_Male.objectName()
-            value = self.settings.value(name)
-            if value != None:
-                self.ui.genderBtn_Male.setChecked(strtobool(value))
+  
 
-        # SpinBoxes - just needs to return a double (or int if using an int SpinBox)
-        if isinstance(self.ui.weightSpinBox, QDoubleSpinBox):
-            name = self.ui.weightSpinBox.objectName()
-            value = self.settings.value(name)
-            if value != None:
-                self.ui.weightSpinBox.setValue(float(value))
-
-        if isinstance(self.ui.heightSpinBox, QDoubleSpinBox):
-            name = self.ui.heightSpinBox.objectName()
-            value = self.settings.value(name)
-            if value != None:
-                self.ui.heightSpinBox.setValue(float(value))
-
-# Outside of Window Class
+# Runner
 if __name__ == "__main__": 
     myApp = QApplication(sys.argv)      # sys.argv: brings in any arguments from the system
     window = Window()
